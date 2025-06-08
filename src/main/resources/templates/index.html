@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>用户分页</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<h1>用户列表</h1>
+
+<div id="searchForm">
+    姓名：<input type="text" id="userName">
+    邮箱：<input type="email" id="userEmail">
+    <button onclick="loadUsers()">检索</button>
+</div>
+
+<div id="message" style="
+    position: fixed; top: 10px; left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: white; padding: 10px 20px;
+    border-radius: 5px; display: none;
+    z-index: 3000;
+"></div>
+
+<table border="1" cellpadding="8">
+    <thead>
+    <tr><th>ID</th><th>姓名</th><th>邮箱</th><th>操作</th></tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+</table>
+
+<div id="pagination" style="margin-top: 10px;"></div>
+
+<!-- 弹窗 -->
+<div id="overlay"></div>
+<div id="popup">
+    <h3 id="popupTitle">用户编辑</h3>
+    <input type="hidden" id="popupUserId">
+    姓名：<input type="text" id="popupUserName"><br><br>
+    邮箱：<input type="email" id="popupUserEmail"><br><br>
+    <button onclick="submitPopup()">提交</button>
+    <button onclick="closePopup()">取消</button>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 5;
+    let popupMode = "edit";
+
+    function loadUsers(page = 1) {
+        currentPage = page;
+        const name = document.getElementById("userName").value.trim();
+        const email = document.getElementById("userEmail").value.trim();
+        const query = `?page=${page}&size=${pageSize}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+
+        fetch(`/api/users${query}`)
+            .then(res => res.json())
+            .then(data => {
+                const userTable = document.getElementById("userTable");
+                userTable.innerHTML = "";
+                const list = data.list || [];
+
+                list.forEach(user => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${escapeHtml(user.name)}</td>
+                        <td>${escapeHtml(user.email || '')}</td>
+                        <td>
+                            <button onclick="openPopup('edit', ${user.id}, '${escapeHtml(user.name)}', '${escapeHtml(user.email || '')}')">编辑</button>
+                            <button onclick="openPopup('add')">追加</button>
+                            <button onclick="deleteUser(${user.id})">删除</button>
+                        </td>`;
+                    userTable.appendChild(tr);
+                });
+
+                renderPagination(data);
+            })
+            .catch(err => {
+                console.error("加载用户失败:", err);
+                showMessage("加载失败", true);
+            });
+    }
+
+    function renderPagination(pageInfo) {
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        if (pageInfo.hasPreviousPage) {
+            pagination.appendChild(createPageButton("上一页", pageInfo.prePage));
+        }
+        for (let i = 1; i <= pageInfo.pages; i++) {
+            const btn = createPageButton(i, i);
+            if (pageInfo.pageNum === i) btn.classList.add("active");
+            pagination.appendChild(btn);
+        }
+        if (pageInfo.hasNextPage) {
+            pagination.appendChild(createPageButton("下一页", pageInfo.nextPage));
+        }
+    }
+
+    function createPageButton(text, page) {
+        const btn = document.createElement("button");
+        btn.textContent = text;
+        btn.addEventListener("click", () => loadUsers(page));
+        return btn;
+    }
+
+    function deleteUser(id) {
+        if (confirm("确定要删除？")) {
+            fetch(`/api/users/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    showMessage("删除成功");
+                    loadUsers(currentPage);
+                })
+                .catch(() => showMessage("删除失败", true));
+        }
+    }
+
+    function openPopup(mode, id = "", name = "", email = "") {
+        popupMode = mode;
+        document.getElementById("popupUserId").value = id || "";
+        document.getElementById("popupUserName").value = name || "";
+        document.getElementById("popupUserEmail").value = email || "";
+        document.getElementById("popupTitle").textContent = mode === "edit" ? "编辑用户" : "追加用户";
+        document.getElementById("popup").style.display = "block";
+        document.getElementById("overlay").style.display = "block";
+    }
+
+    function closePopup() {
+        document.getElementById("popup").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
+    }
+
+    function submitPopup() {
+        const id = document.getElementById("popupUserId").value;
+        const name = document.getElementById("popupUserName").value.trim();
+        const email = document.getElementById("popupUserEmail").value.trim();
+
+        if (!name) {
+            alert("姓名不能为空");
+            return;
+        }
+
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert("邮箱格式不正确");
+            return;
+        }
+
+        const user = { name, email };
+        const url = popupMode === "edit" ? `/api/users/${id}` : `/api/users`;
+        const method = popupMode === "edit" ? "PUT" : "POST";
+
+        fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user)
+        }).then(() => {
+            closePopup();
+            showMessage(popupMode === "edit" ? "保存成功" : "追加成功");
+            loadUsers(currentPage);
+        }).catch(() => {
+            showMessage(popupMode === "edit" ? "保存失败" : "追加失败", true);
+        });
+    }
+
+    function showMessage(text, isError = false) {
+        const msg = document.getElementById("message");
+        msg.textContent = text;
+        msg.style.backgroundColor = isError ? "#f44336" : "#4CAF50";
+        msg.style.display = "block";
+        setTimeout(() => { msg.style.display = "none"; }, 3000);
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+//     window.onload = () => {
+//         loadUsers();
+//     }
+</script>
+
+</body>
+</html>

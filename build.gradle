@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.5'  // 可根据实际调整版本
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17' // 或你的 JDK 版本
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 核心模块
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // MyBatis
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+
+    // MySQL 驱动（或你使用的其他数据库）
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // 分页插件 PageHelper（可选）
+    implementation 'com.github.pagehelper:pagehelper-spring-boot-starter:1.4.7'
+
+    // 热部署
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // 单元测试
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+configurations {
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

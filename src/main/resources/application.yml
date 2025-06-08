@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/mysql?useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  thymeleaf:
+    cache: false  # 关闭模板缓存，支持 Thymeleaf 热加载
+  devtools:
+    restart:
+      enabled: true   # 启用自动重启
+    livereload:
+      enabled: true   # 启用 livereload 自动刷新浏览器
+
+

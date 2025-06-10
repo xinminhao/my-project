@@ -5,6 +5,16 @@ public class User {
 	private String name;
 	private String email;
 
+    public User() {
+    }
+    
+	public User(Integer id, String name, String email) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.email = email;
+	}
+
 	// 必须提供 getter 和 setter
 	public Integer getId() {
 		return id;

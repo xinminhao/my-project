@@ -1,191 +1,411 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>用户分页</title>
-    <link rel="stylesheet" href="/style.css">
+<meta charset="UTF-8" />
+<title>用户管理 - 导入CSV & 导出PDF/Excel</title>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 30px;
+    background: #f7f9fc;
+    color: #333;
+  }
+  h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+  }
+  #searchForm, #importForm {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #searchForm label, #importForm label {
+    font-weight: 600;
+  }
+  input[type="text"], input[type="email"], input[type="file"], select {
+    padding: 8px 10px;
+    border: 1.5px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, select:focus, input[type="file"]:focus {
+    border-color: #3498db;
+    outline: none;
+  }
+  button {
+    background-color: #3498db;
+    border: none;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #2980b9;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  }
+  thead {
+    background-color: #3498db;
+    color: white;
+  }
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+  tbody tr:hover {
+    background-color: #f1f9ff;
+  }
+  #pagination {
+    margin-top: 20px;
+    text-align: center;
+  }
+  #pagination button {
+    margin: 0 5px;
+    padding: 8px 14px;
+    border: 1.5px solid #3498db;
+    background-color: white;
+    color: #3498db;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  #pagination button.active,
+  #pagination button:hover {
+    background-color: #3498db;
+    color: white;
+  }
+  #downloadButtons {
+    margin: 20px 0;
+    display: flex;
+    gap: 15px;
+  }
+  #downloadButtons button {
+    background-color: #27ae60;
+  }
+  #downloadButtons button:hover {
+    background-color: #1e8449;
+  }
+  #message {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4caf50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    display: none;
+    z-index: 9999;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
+  }
+/* #3498db */
+
+  /* 表格容器，带滚动条 */
+  #tableContainer {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* 防止列宽抖动 */
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-color: #fff; /* 防止滚动时闪烁 */
+    font-size: 14px;
+  }
+
+  /* 表头样式，固定顶部且背景一致 */
+  thead th {
+    position: sticky;
+    top: 0;
+    background-color: #3498db; /* 与按钮统一的颜色 */
+    color: #000;
+    z-index: 10;
+    font-weight: bold;
+  }
+
+  thead th::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #3498db;
+    z-index: -1; /* 防止内容被遮挡，增强背景填充 */
+  }
+</style>
+
 </head>
 <body>
 
-<h1>用户列表</h1>
+<h1>用户管理</h1>
+
+<form id="importForm">
+  <label for="csvFile">导入 CSV 文件：</label>
+  <input type="file" id="csvFile" accept=".csv" required />
+  <button type="button" onclick="importCSV()">导入</button>
+  <button onclick="openAddPopup()">新增用户</button>
+</form>
 
 <div id="searchForm">
-    姓名：<input type="text" id="userName">
-    邮箱：<input type="email" id="userEmail">
-    <button onclick="loadUsers()">检索</button>
+  <label for="userName">姓名：</label>
+  <input type="text" id="userName" placeholder="请输入姓名" />
+  <label for="userEmail">邮箱：</label>
+  <input type="email" id="userEmail" placeholder="请输入邮箱" />
+  <label for="pageSizeSelector">每页显示：</label>
+  <select id="pageSizeSelector" onchange="loadUsers(1)">
+    <option value="5" selected>5条</option>
+    <option value="10">10条</option>
+  </select>
+  <button onclick="loadUsers()">检索</button>
 </div>
 
-<div id="message" style="
-    position: fixed; top: 10px; left: 50%;
-    transform: translateX(-50%);
-    background-color: #4CAF50;
-    color: white; padding: 10px 20px;
-    border-radius: 5px; display: none;
-    z-index: 3000;
-"></div>
+<div id="downloadButtons">
+  <button onclick="downloadExcel()">导出 Excel</button>
+  <button onclick="downloadPDF()">导出 PDF</button>
+</div>
 
-<table border="1" cellpadding="8">
+<!-- 表格部分，带滚动容器 + 固定表头 -->
+<div id="tableContainer">
+  <table>
     <thead>
-    <tr><th>ID</th><th>姓名</th><th>邮箱</th><th>操作</th></tr>
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th style="width: 120px;">姓名</th>
+        <th style="width: 200px;">邮箱</th>
+        <th style="width: 100px;">操作</th>
+      </tr>
     </thead>
     <tbody id="userTable"></tbody>
-</table>
-
-<div id="pagination" style="margin-top: 10px;"></div>
-
-<!-- 弹窗 -->
-<div id="overlay"></div>
-<div id="popup">
-    <h3 id="popupTitle">用户编辑</h3>
-    <input type="hidden" id="popupUserId">
-    姓名：<input type="text" id="popupUserName"><br><br>
-    邮箱：<input type="email" id="popupUserEmail"><br><br>
-    <button onclick="submitPopup()">提交</button>
-    <button onclick="closePopup()">取消</button>
+  </table>
 </div>
 
+
+<div id="overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9998;"></div>
+<div id="popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:9999;">
+  <h3 id="popupTitle">编辑用户</h3>
+  <input type="hidden" id="popupUserId">
+  姓名：<input type="text" id="popupUserName"><br><br>
+  邮箱：<input type="email" id="popupUserEmail"><br><br>
+  <button onclick="submitPopup()">提交</button>
+  <button onclick="closePopup()">取消</button>
+</div>
+
+<div id="pagination"></div>
+<div id="message"></div>
+
 <script>
-    let currentPage = 1;
-    const pageSize = 5;
-    let popupMode = "edit";
+//当前页码
+let currentPage = 1;
 
-    function loadUsers(page = 1) {
-        currentPage = page;
-        const name = document.getElementById("userName").value.trim();
-        const email = document.getElementById("userEmail").value.trim();
-        const query = `?page=${page}&size=${pageSize}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+// 获取当前每页显示数量
+function getPageSize() {
+  return parseInt(document.getElementById("pageSizeSelector").value, 10);
+}
 
-        fetch(`/api/users${query}`)
-            .then(res => res.json())
-            .then(data => {
-                const userTable = document.getElementById("userTable");
-                userTable.innerHTML = "";
-                const list = data.list || [];
+// 加载用户数据并渲染用户表格及分页
+function loadUsers(page = 1) {
+  currentPage = page;
+  const name = document.getElementById("userName").value.trim();
+  const email = document.getElementById("userEmail").value.trim();
+  const size = getPageSize();
+  const query = `?page=${page}&size=${size}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+  
+  fetch(`/api/users${query}`)
+    .then(res => res.json())
+    .then(data => {
+      const userTable = document.getElementById("userTable");
+      userTable.innerHTML = "";
 
-                list.forEach(user => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${user.id}</td>
-                        <td>${escapeHtml(user.name)}</td>
-                        <td>${escapeHtml(user.email || '')}</td>
-                        <td>
-                            <button onclick="openPopup('edit', ${user.id}, '${escapeHtml(user.name)}', '${escapeHtml(user.email || '')}')">编辑</button>
-                            <button onclick="openPopup('add')">追加</button>
-                            <button onclick="deleteUser(${user.id})">删除</button>
-                        </td>`;
-                    userTable.appendChild(tr);
-                });
+      (data.list || []).forEach(user => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${user.id}</td>
+          <td>${escapeHtml(user.name)}</td>
+          <td>${escapeHtml(user.email || '')}</td>
+          <td>
+            <button onclick='editUser(${JSON.stringify(user)})'>编辑</button>
+            <button onclick='deleteUser(${user.id})'>删除</button>
+          </td>`;
+        userTable.appendChild(tr);
+      });
 
-                renderPagination(data);
-            })
-            .catch(err => {
-                console.error("加载用户失败:", err);
-                showMessage("加载失败", true);
-            });
-    }
+      renderPagination(data);
+    })
+    .catch(() => showMessage("加载用户失败", true));
+}
 
-    function renderPagination(pageInfo) {
-        const pagination = document.getElementById("pagination");
-        pagination.innerHTML = "";
+// 渲染分页按钮
+function renderPagination(pageInfo) {
+  const pagination = document.getElementById("pagination");
+  pagination.innerHTML = "";
 
-        if (pageInfo.hasPreviousPage) {
-            pagination.appendChild(createPageButton("上一页", pageInfo.prePage));
-        }
-        for (let i = 1; i <= pageInfo.pages; i++) {
-            const btn = createPageButton(i, i);
-            if (pageInfo.pageNum === i) btn.classList.add("active");
-            pagination.appendChild(btn);
-        }
-        if (pageInfo.hasNextPage) {
-            pagination.appendChild(createPageButton("下一页", pageInfo.nextPage));
-        }
-    }
+  if (pageInfo.hasPreviousPage)
+    pagination.appendChild(createPageButton("上一页", pageInfo.prePage));
 
-    function createPageButton(text, page) {
-        const btn = document.createElement("button");
-        btn.textContent = text;
-        btn.addEventListener("click", () => loadUsers(page));
-        return btn;
-    }
+  for (let i = 1; i <= pageInfo.pages; i++) {
+    const btn = createPageButton(i, i);
+    if (pageInfo.pageNum === i) btn.classList.add("active");
+    pagination.appendChild(btn);
+  }
 
-    function deleteUser(id) {
-        if (confirm("确定要删除？")) {
-            fetch(`/api/users/${id}`, { method: 'DELETE' })
-                .then(() => {
-                    showMessage("删除成功");
-                    loadUsers(currentPage);
-                })
-                .catch(() => showMessage("删除失败", true));
-        }
-    }
+  if (pageInfo.hasNextPage)
+    pagination.appendChild(createPageButton("下一页", pageInfo.nextPage));
+}
 
-    function openPopup(mode, id = "", name = "", email = "") {
-        popupMode = mode;
-        document.getElementById("popupUserId").value = id || "";
-        document.getElementById("popupUserName").value = name || "";
-        document.getElementById("popupUserEmail").value = email || "";
-        document.getElementById("popupTitle").textContent = mode === "edit" ? "编辑用户" : "追加用户";
-        document.getElementById("popup").style.display = "block";
-        document.getElementById("overlay").style.display = "block";
-    }
+// 创建分页按钮并绑定点击事件
+function createPageButton(text, page) {
+  const btn = document.createElement("button");
+  btn.textContent = text;
+  btn.addEventListener("click", () => loadUsers(page));
+  return btn;
+}
 
-    function closePopup() {
-        document.getElementById("popup").style.display = "none";
-        document.getElementById("overlay").style.display = "none";
-    }
+// 打开新增用户弹窗
+function openAddPopup() {
+  document.getElementById("popupTitle").textContent = "新增用户";
+  document.getElementById("popupUserId").value = "";
+  document.getElementById("popupUserName").value = "";
+  document.getElementById("popupUserEmail").value = "";
+  document.getElementById("popup").style.display = "block";
+  document.getElementById("overlay").style.display = "block";
+}
 
-    function submitPopup() {
-        const id = document.getElementById("popupUserId").value;
-        const name = document.getElementById("popupUserName").value.trim();
-        const email = document.getElementById("popupUserEmail").value.trim();
+// 下载用户信息为 Excel 文件
+function downloadExcel() {
+  const name = document.getElementById("userName").value.trim();
+  const email = document.getElementById("userEmail").value.trim();
+  const size = getPageSize();
+  window.open(`/api/users/export/excel?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
+}
 
-        if (!name) {
-            alert("姓名不能为空");
-            return;
-        }
+// 下载用户信息为 PDF 文件
+function downloadPDF() {
+  const name = document.getElementById("userName").value.trim();
+  const email = document.getElementById("userEmail").value.trim();
+  const size = getPageSize();
+  window.open(`/api/users/export/pdf?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
+}
 
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            alert("邮箱格式不正确");
-            return;
-        }
+// 导入 CSV 文件
+function importCSV() {
+  const fileInput = document.getElementById("csvFile");
+  if (fileInput.files.length === 0) return showMessage("请选择CSV文件", true);
 
-        const user = { name, email };
-        const url = popupMode === "edit" ? `/api/users/${id}` : `/api/users`;
-        const method = popupMode === "edit" ? "PUT" : "POST";
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
 
-        fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user)
-        }).then(() => {
-            closePopup();
-            showMessage(popupMode === "edit" ? "保存成功" : "追加成功");
-            loadUsers(currentPage);
-        }).catch(() => {
-            showMessage(popupMode === "edit" ? "保存失败" : "追加失败", true);
-        });
-    }
+  fetch('/api/users/import/csv', {
+    method: 'POST',
+    body: formData
+  }).then(res => res.text())
+    .then(text => {
+      showMessage(text, text !== "导入成功");
+      if (text === "导入成功") loadUsers(1);
+    })
+    .catch(() => showMessage("导入失败", true));
+}
 
-    function showMessage(text, isError = false) {
-        const msg = document.getElementById("message");
-        msg.textContent = text;
-        msg.style.backgroundColor = isError ? "#f44336" : "#4CAF50";
-        msg.style.display = "block";
-        setTimeout(() => { msg.style.display = "none"; }, 3000);
-    }
+// 显示消息提示
+function showMessage(text, isError = false) {
+  const msg = document.getElementById("message");
+  msg.textContent = text;
+  msg.style.backgroundColor = isError ? "#f44336" : "#4caf50";
+  msg.style.display = "block";
+  setTimeout(() => { msg.style.display = "none"; }, 3000);
+}
 
-    function escapeHtml(text) {
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-    }
+// 转义 HTML，防止 XSS
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#39;");
+}
 
-//     window.onload = () => {
-//         loadUsers();
-//     }
+// 打开编辑用户弹窗
+function editUser(user) {
+  document.getElementById("popupUserId").value = user.id;
+  document.getElementById("popupUserName").value = user.name;
+  document.getElementById("popupUserEmail").value = user.email || "";
+  document.getElementById("popup").style.display = "block";
+  document.getElementById("overlay").style.display = "block";
+}
+
+// 关闭弹窗
+function closePopup() {
+  document.getElementById("popup").style.display = "none";
+  document.getElementById("overlay").style.display = "none";
+}
+
+// 校验邮箱格式
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// 提交新增/编辑用户数据
+function submitPopup() {
+  const id = document.getElementById("popupUserId").value;
+  const name = document.getElementById("popupUserName").value.trim();
+  const email = document.getElementById("popupUserEmail").value.trim();
+
+  if (!name || !email) return alert("姓名和邮箱不能为空！");
+  if (!isValidEmail(email)) return alert("邮箱格式不正确！");
+
+  const method = id ? "PUT" : "POST";
+  const url = id ? `/api/users/${id}` : `/api/users`;
+  const bodyData = id ? { id, name, email } : { name, email };
+
+  fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyData)
+  }).then(res => res.text())
+    .then(msg => {
+      showMessage(msg);
+      closePopup();
+      loadUsers(currentPage);
+    })
+    .catch(() => showMessage("更新失败", true));
+}
+
+// 删除用户
+function deleteUser(id) {
+  if (!confirm("确认要删除该用户？")) return;
+
+  fetch(`/api/users/${id}`, { method: "DELETE" })
+    .then(res => res.text())
+    .then(msg => {
+      showMessage(msg);
+      loadUsers(currentPage);
+    })
+    .catch(() => showMessage("删除失败", true));
+}
+
+// window.onload = () => loadUsers();
 </script>
 
 </body>

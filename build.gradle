@@ -13,24 +13,16 @@ repositories {
 }
 
 dependencies {
-    // 核心模块
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-
-    // MyBatis
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
-
-    // MySQL 驱动（或你使用的其他数据库）
-    runtimeOnly 'com.mysql:mysql-connector-j'
-
-    // 分页插件 PageHelper（可选）
-    implementation 'com.github.pagehelper:pagehelper-spring-boot-starter:1.4.7'
-
-    // 热部署
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-
-    // 单元测试
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.springframework.boot:spring-boot-starter-web'                  // 核心模块
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'            // thymeleaf
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'         // MyBatis
+    runtimeOnly 'com.mysql:mysql-connector-j'                                          // MySQL 驱动（或你使用的其他数据库）
+    implementation 'com.github.pagehelper:pagehelper-spring-boot-starter:1.4.7'        // 分页插件 PageHelper（可选）
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'                    // 热部署
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'             // 单元测试
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'     // Excel
+    implementation 'com.itextpdf:itext7-core:7.2.5'      // PDF
+    implementation 'com.opencsv:opencsv:5.9'             // CSV
 }
 
 configurations {

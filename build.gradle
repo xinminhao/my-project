@@ -23,6 +23,10 @@ dependencies {
     implementation 'org.apache.poi:poi-ooxml:5.2.5'     // Excel
     implementation 'com.itextpdf:itext7-core:7.2.5'      // PDF
     implementation 'com.opencsv:opencsv:5.9'             // CSV
+    implementation 'com.itextpdf:itext7-core:8.0.3' // 推荐使用官方聚合包（含字体）
+    implementation 'com.itextpdf:kernel:8.0.3'
+    implementation 'com.itextpdf:layout:8.0.3'
+    implementation 'com.itextpdf:io:8.0.3'
 }
 
 configurations {

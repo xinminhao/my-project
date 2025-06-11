@@ -32,4 +32,9 @@ public class UserService {
     public void deleteUser(Integer id) {
         userMapper.deleteUser(id);
     }
+    
+    public void deleteUsersByIds(List<Integer> ids) {
+        userMapper.deleteUsersByIds(ids);
+    }
+
 }

@@ -27,11 +27,20 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
+import com.example.demo.util.MessageUtil;
 import com.github.pagehelper.PageInfo;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
 
@@ -89,20 +98,56 @@ public class UserController {
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
 
-        Table table = new Table(3);
-        table.addCell("ID");
-        table.addCell("姓名");
-        table.addCell("邮箱");
+        // 加载系统字体（如微软雅黑）
+        String fontPath = "C:/Windows/Fonts/msyh.ttc"; // Windows 系统示例
+        PdfFont font = PdfFontFactory.createFont(fontPath + ",0", PdfEncodings.IDENTITY_H, pdf);
 
+        // 添加标题
+        Paragraph title = new Paragraph("用户信息列表")
+                .setFont(font)
+                .setFontSize(16)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(20);
+        document.add(title);
+
+        float[] columnWidths = {60F, 150F, 250F};
+        Table table = new Table(columnWidths);
+        table.setWidth(UnitValue.createPercentValue(100));
+
+        // 表头
+        table.addHeaderCell(createHeaderCell("ID", font));
+        table.addHeaderCell(createHeaderCell("姓名", font));
+        table.addHeaderCell(createHeaderCell("邮箱", font));
+
+        // 内容行
         for (User user : users) {
-            table.addCell(String.valueOf(user.getId()));
-            table.addCell(user.getName());
-            table.addCell(user.getEmail() == null ? "" : user.getEmail());
+            table.addCell(createBodyCell(String.valueOf(user.getId()), font));
+            table.addCell(createBodyCell(user.getName(), font));
+            table.addCell(createBodyCell(user.getEmail() == null ? "" : user.getEmail(), font));
         }
 
         document.add(table);
         document.close();
     }
+
+    private Cell createHeaderCell(String text, PdfFont font) {
+        return new Cell()
+                .add(new Paragraph(text).setFont(font))
+                .setBackgroundColor(ColorConstants.LIGHT_GRAY)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setPadding(5);
+    }
+
+    private Cell createBodyCell(String text, PdfFont font) {
+        return new Cell()
+                .add(new Paragraph(text).setFont(font))
+                .setTextAlignment(TextAlignment.LEFT)
+                .setPadding(5);
+    }
+
+
 
     // 上传 CSV 文件导入用户数据
     @PostMapping("/api/users/import/csv")
@@ -111,43 +156,28 @@ public class UserController {
              CSVReader csvReader = new CSVReader(reader)) {
 
             List<String[]> rows = csvReader.readAll();
-
-            // 防止文件为空或只有表头
             if (rows.size() <= 1) {
-                return "CSV内容为空或缺少数据行";
+                return MessageUtil.get("user.import.fail", "CSV内容为空或缺少数据行");
             }
 
             List<User> users = new ArrayList<>();
-            for (int i = 1; i < rows.size(); i++) { // 从索引1开始跳过表头
+            for (int i = 1; i < rows.size(); i++) {
                 String[] data = rows.get(i);
-                if (data.length < 2) {
-                    System.err.println("跳过无效行：" + Arrays.toString(data));
-                    continue; // 跳过非法行
-                }
-
-                String username = data[0].trim();
-                String email = data[1].trim();
-
-                if (username.isEmpty() || email.isEmpty()) {
-                    System.err.println("跳过空值行：" + Arrays.toString(data));
+                if (data.length < 2 || data[0].trim().isEmpty() || data[1].trim().isEmpty()) {
                     continue;
                 }
-
-                User user = new User(null, username, email);
-                users.add(user);
+                users.add(new User(null, data[0].trim(), data[1].trim()));
             }
 
             for (User user : users) {
                 userService.addUser(user);
             }
 
-            return "导入成功，导入用户数：" + users.size();
-        } catch (IOException | CsvException e) {
-            e.printStackTrace();
-            return "导入失败：" + e.getMessage();
+            return MessageUtil.get("user.import.success", users.size());
+        } catch (Exception e) {
+            return MessageUtil.get("user.import.fail", e.getMessage());
         }
     }
-
     
     @ResponseBody
     @GetMapping("/api/users")
@@ -162,30 +192,39 @@ public class UserController {
     // 新增用户
     @ResponseBody
     @PostMapping("/api/users")
-    public User addUser(@RequestBody User user) {
-    	logger.info("添加用户: {}", user);
+    public String addUser(@RequestBody User user) {
+        logger.info("添加用户: {}", user);
         userService.addUser(user);
-        return user;
+        return MessageUtil.get("user.add.success", user.getName());
     }
 
-    // 修改用户
     @ResponseBody
     @PutMapping("/api/users/{id}")
-    public User updateUser(@PathVariable("id") Integer id, @RequestBody User user) {
-    	logger.info("更新用户: {}", user);
+    public String updateUser(@PathVariable("id") Integer id, @RequestBody User user) {
+        logger.info("更新用户: {}", user);
         user.setId(id);
         userService.updateUser(user);
-        return user;
+        return MessageUtil.get("user.update.success", user.getName());
     }
 
     // 删除用户
     @ResponseBody
     @DeleteMapping("/api/users/{id}")
     public String deleteUser(@PathVariable("id") Integer id) {
-    	logger.warn("删除用户 ID: {}", id);
+        logger.warn("删除用户 ID: {}", id);
         userService.deleteUser(id);
-        return "success";
+        return MessageUtil.get("user.delete.success", id);
     }
+    
+    @PostMapping("/api/users/batch-delete")
+    public String deleteUsers(@RequestBody List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return MessageUtil.get("user.delete.batch.empty");
+        }
+        userService.deleteUsersByIds(ids);
+        return MessageUtil.get("user.delete.batch.success");
+    }
+
 }
 
 

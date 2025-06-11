@@ -3,11 +3,11 @@ package com.example.demo.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.Update;
 
@@ -28,4 +28,8 @@ public interface UserMapper {
 
     @Delete("DELETE FROM users WHERE id=#{id}")
     void deleteUser(Integer id);
+    
+    @DeleteProvider(type = UserSqlProvider.class, method = "deleteUsersByIds")
+    void deleteUsersByIds(@Param("ids") List<Integer> ids);
+
 }

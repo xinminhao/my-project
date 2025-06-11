@@ -182,6 +182,7 @@
 </div>
 
 <div id="downloadButtons">
+  <button onclick="deleteSelectedUsers()" style="background-color: #e74c3c;">批量删除</button>
   <button onclick="downloadExcel()">导出 Excel</button>
   <button onclick="downloadPDF()">导出 PDF</button>
 </div>
@@ -191,6 +192,7 @@
   <table>
     <thead>
       <tr>
+        <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
         <th style="width: 60px;">ID</th>
         <th style="width: 120px;">姓名</th>
         <th style="width: 200px;">邮箱</th>
@@ -200,7 +202,6 @@
     <tbody id="userTable"></tbody>
   </table>
 </div>
-
 
 <div id="overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9998;"></div>
 <div id="popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:9999;">
@@ -241,6 +242,7 @@ function loadUsers(page = 1) {
       (data.list || []).forEach(user => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
+          <td><input type="checkbox" class="userCheckbox" value="${user.id}"></td>
           <td>${user.id}</td>
           <td>${escapeHtml(user.name)}</td>
           <td>${escapeHtml(user.email || '')}</td>
@@ -293,20 +295,48 @@ function openAddPopup() {
 }
 
 // 下载用户信息为 Excel 文件
+// function downloadExcel() {
+//   const name = document.getElementById("userName").value.trim();
+//   const email = document.getElementById("userEmail").value.trim();
+//   const size = getPageSize();
+//   window.open(`/api/users/export/excel?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
+// }
 function downloadExcel() {
   const name = document.getElementById("userName").value.trim();
   const email = document.getElementById("userEmail").value.trim();
   const size = getPageSize();
-  window.open(`/api/users/export/excel?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
+  const url = `/api/users/export/excel?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "用户信息.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // 下载用户信息为 PDF 文件
+// function downloadPDF() {
+//   const name = document.getElementById("userName").value.trim();
+//   const email = document.getElementById("userEmail").value.trim();
+//   const size = getPageSize();
+//   window.open(`/api/users/export/pdf?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
+// }
 function downloadPDF() {
-  const name = document.getElementById("userName").value.trim();
-  const email = document.getElementById("userEmail").value.trim();
-  const size = getPageSize();
-  window.open(`/api/users/export/pdf?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`, "_blank");
-}
+	  const name = document.getElementById("userName").value.trim();
+	  const email = document.getElementById("userEmail").value.trim();
+	  const size = getPageSize();
+	  const url = `/api/users/export/pdf?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&size=${size}`;
+
+	  // 创建隐藏 a 标签
+	  const link = document.createElement("a");
+	  link.href = url;
+	  link.download = "用户信息.pdf"; // 提示浏览器下载而非打开
+	  document.body.appendChild(link);
+	  link.click();
+	  document.body.removeChild(link);
+	}
+
 
 // 导入 CSV 文件
 function importCSV() {
@@ -403,6 +433,37 @@ function deleteUser(id) {
       loadUsers(currentPage);
     })
     .catch(() => showMessage("删除失败", true));
+}
+
+//全选/取消全选
+function toggleSelectAll(checkbox) {
+  document.querySelectorAll('.userCheckbox').forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
+}
+
+// 批量删除
+function deleteSelectedUsers() {
+  const selectedIds = Array.from(document.querySelectorAll('.userCheckbox:checked'))
+    .map(cb => cb.value);
+
+  if (selectedIds.length === 0) {
+    return alert("请先选择要删除的用户！");
+  }
+
+  if (!confirm(`确认要删除选中的 ${selectedIds.length} 个用户？`)) return;
+
+  fetch('/api/users/batch-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(selectedIds)
+  })
+  .then(res => res.text())
+  .then(msg => {
+    showMessage(msg);
+    loadUsers(currentPage);
+  })
+  .catch(() => showMessage("批量删除失败", true));
 }
 
 // window.onload = () => loadUsers();

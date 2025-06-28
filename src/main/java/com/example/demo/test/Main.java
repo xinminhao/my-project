@@ -1,4 +1,7 @@
-package com.example.demo;
+package com.example.demo.test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
 	public static class Data {
@@ -27,15 +30,12 @@ public class Main {
     // DataAll 包含一个 Data 数组
     public static class DataAll {
         private Data[] data;
-
         public DataAll(Data[] data) {
             this.data = data;
         }
-
         public Data[] getData() {
             return data;
         }
-
         public void setData(Data[] data) {
             this.data = data;
         }
@@ -65,6 +65,15 @@ public class Main {
         // 输出验证
         for (Data d : dataAll.getData()) {
             System.out.println("姓名: " + d.getName() + "，错误码: " + d.getErrorMsg());
+        }
+        
+        // 过滤 errorMsg == 1 的数据到 List<Object[]>
+        List<Object[]> filtered = new ArrayList<>();
+        for (Object[] row : raw) {
+            int errorMsg = (Integer) row[1];
+            if (errorMsg == 1) {
+                filtered.add(row);
+            }
         }
     }
 }

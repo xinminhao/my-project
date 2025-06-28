@@ -9,7 +9,7 @@ public class Test {
         private Object[][] data;
 
         public DataAll() {
-            this.data = data;
+            data = data;
         }
 
         public Object[][] getData() {
